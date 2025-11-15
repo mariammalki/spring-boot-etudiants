@@ -2,9 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
-        SLACK_WEBHOOK = credentials('slack-webhook-id')  // stocké dans Jenkins Credentials
-        IMAGE_NAME = "mariem507/spring-etudiants"
+        DOCKERHUB = credentials('dockerhub-id')
+        IMAGE_NAME = "mariam/spring-etudiants"
     }
 
     stages {
@@ -21,9 +20,7 @@ pipeline {
 
                 sh "docker build -t ${IMAGE_NAME}:v1.1 ."
 
-                sh """
-                    echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
-                """
+                sh "echo ${DOCKERHUB_PSW} | docker login -u ${DOCKERHUB_USR} --password-stdin"
 
                 sh "docker push ${IMAGE_NAME}:v1.1"
             }
@@ -37,27 +34,17 @@ pipeline {
 
         stage('Security & Quality Scan') {
             steps {
-
-                // Analyse SonarQube
                 withSonarQubeEnv('SonarQubeServer') {
                     sh 'mvn sonar:sonar'
                 }
-
-                // Trivy Scan code source
                 sh 'trivy fs --exit-code 1 .'
-
-                // Trivy Scan image Docker
                 sh "trivy image --exit-code 1 ${IMAGE_NAME}:v1.1"
             }
         }
 
         stage('Slack Notification') {
             steps {
-                slackSend(
-                    baseUrl: "${SLACK_WEBHOOK}",
-                    message: "Pipeline SUCCESS ✔ - Build #${env.BUILD_NUMBER}",
-                    color: "good"
-                )
+                slackSend(channel: '#ci-cd', color: 'good', message: "Pipeline succeeded for build ${env.BUILD_NUMBER}")
             }
         }
 
@@ -70,11 +57,7 @@ pipeline {
 
     post {
         failure {
-            slackSend(
-                baseUrl: "${SLACK_WEBHOOK}",
-                message: "❌ Pipeline FAILED - Build #${env.BUILD_NUMBER}",
-                color: "danger"
-            )
+            slackSend(channel: '#ci-cd', color: 'danger', message: "Pipeline FAILED for build ${env.BUILD_NUMBER}")
         }
     }
 }
