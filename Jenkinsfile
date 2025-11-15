@@ -9,15 +9,15 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps { git 'https://github.com/toncompte/spring-boot-etudiants.git' }
+            steps { git 'https://github.com/mariammalki/spring-boot-etudiants.git' }
         }
 
         stage('Build & Docker') {
             steps {
                 sh 'mvn clean package -DskipTests'
-                sh "docker build -t ${IMAGE_NAME}:v1.0 ."
-                sh "docker login -u ${DOCKERHUB_CREDENTIALS_USR} -p ${DOCKERHUB_CREDENTIALS_PSW}"
-                sh "docker push ${IMAGE_NAME}:v1.0"
+                sh "docker build -t spring-etudiants:v1.1 ."
+                sh "docker login -u mariem507 -p maryem123"
+                sh "docker push spring-etudiants:v1.1"
             }
         }
 
