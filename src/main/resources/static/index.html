@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des Étudiants</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        input, button { margin: 5px; }
+        table { border-collapse: collapse; width: 80%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Gestion des Étudiants</h1>
+
+    <h2>Ajouter un étudiant</h2>
+    <input type="text" id="nom" placeholder="Nom">
+    <input type="text" id="prenom" placeholder="Prénom">
+    <input type="text" id="email" placeholder="Email">
+    <input type="text" id="niveau" placeholder="Niveau">
+    <button onclick="ajouterEtudiant()">Ajouter</button>
+
+    <h2>Liste des étudiants</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Email</th>
+                <th>Niveau</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="etudiants-table"></tbody>
+    </table>
+
+    <script src="app.js"></script>
+</body>
+</html>
