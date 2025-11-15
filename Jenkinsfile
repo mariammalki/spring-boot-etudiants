@@ -3,43 +3,61 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-id')
-        SLACK_WEBHOOK = credentials('slack-webhook-id')
-        IMAGE_NAME = "mariam/spring-etudiants"
+        SLACK_WEBHOOK = credentials('slack-webhook-id')  // stocké dans Jenkins Credentials
+        IMAGE_NAME = "mariem507/spring-etudiants"
     }
 
     stages {
+
         stage('Checkout') {
-            steps { git 'https://github.com/mariammalki/spring-boot-etudiants.git' }
+            steps {
+                git 'https://github.com/mariammalki/spring-boot-etudiants.git'
+            }
         }
 
         stage('Build & Docker') {
             steps {
                 sh 'mvn clean package -DskipTests'
-                sh "docker build -t spring-etudiants:v1.1 ."
-                sh "docker login -u mariem507 -p maryem123"
-                sh "docker push spring-etudiants:v1.1"
+
+                sh "docker build -t ${IMAGE_NAME}:v1.1 ."
+
+                sh """
+                    echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin
+                """
+
+                sh "docker push ${IMAGE_NAME}:v1.1"
             }
         }
 
         stage('Tests Unitaires') {
-            steps { sh 'mvn test' }
+            steps {
+                sh 'mvn test'
+            }
         }
 
         stage('Security & Quality Scan') {
             steps {
-                // SonarQube
+
+                // Analyse SonarQube
                 withSonarQubeEnv('SonarQubeServer') {
                     sh 'mvn sonar:sonar'
                 }
-                // Trivy scan code & Docker image
+
+                // Trivy Scan code source
                 sh 'trivy fs --exit-code 1 .'
-                sh "trivy image --exit-code 1 ${IMAGE_NAME}:v1.0"
+
+                // Trivy Scan image Docker
+                sh "trivy image --exit-code 1 ${IMAGE_NAME}:v1.1"
             }
         }
 
         stage('Slack Notification') {
             steps {
-                slackSend (channel: '#ci-cd', color: 'good', message: "Pipeline succeeded for build ${env.BUILD_NUMBER}", webhookUrl: "${SLACK_WEBHOOK}")
+                slackSend(
+                    baseUrl: "${SLACK_WEBHOOK}",
+                    message: "Pipeline SUCCESS ✔ - Build #${env.BUILD_NUMBER}",
+                    color: "good"
+                )
             }
         }
 
@@ -52,7 +70,11 @@ pipeline {
 
     post {
         failure {
-            slackSend(channel: '#ci-cd', color: 'danger', message: "Pipeline FAILED for build ${env.BUILD_NUMBER}", webhookUrl: "${SLACK_WEBHOOK}")
+            slackSend(
+                baseUrl: "${SLACK_WEBHOOK}",
+                message: "❌ Pipeline FAILED - Build #${env.BUILD_NUMBER}",
+                color: "danger"
+            )
         }
     }
 }
