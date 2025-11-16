@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "mariam507/spring-etudiants"
+        IMAGE_NAME = "mariem507/spring-etudiants"
         TAG = "v1.1"
     }
 
