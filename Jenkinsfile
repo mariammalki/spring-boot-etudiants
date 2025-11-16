@@ -1,5 +1,6 @@
 pipeline {
-    agent any
+    agent { label 'contrôleur' }
+
 
     environment {
         IMAGE_NAME = "mariem507/spring-etudiants"
