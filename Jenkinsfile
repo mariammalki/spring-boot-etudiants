@@ -63,10 +63,8 @@ pipeline {
 
     post {
         always {
-            node { // Assure que le contexte node est présent
-                echo "Nettoyage du conteneur local"
-                sh 'docker rm -f etudiants || true'
-            }
+            echo "Nettoyage du conteneur local"
+            sh 'docker rm -f etudiants || true'
         }
         failure {
             echo "Le pipeline a échoué !"
