@@ -36,6 +36,7 @@ pipeline {
                       -e SPRING_DATASOURCE_URL=jdbc:postgresql://pg-etudiants:5432/etudiantsdb \
                       -e SPRING_DATASOURCE_USERNAME=myuser \
                       -e SPRING_DATASOURCE_PASSWORD=pass123 \
+                      --name etudiants \
                       ${IMAGE_NAME}:${TAG}
                 '''
             }
@@ -62,8 +63,10 @@ pipeline {
 
     post {
         always {
-            echo "Nettoyage du conteneur local"
-            sh 'docker rm -f etudiants || true'
+            node { // Assure que le contexte node est présent
+                echo "Nettoyage du conteneur local"
+                sh 'docker rm -f etudiants || true'
+            }
         }
         failure {
             echo "Le pipeline a échoué !"
