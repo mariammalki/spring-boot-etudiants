@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "mariem507/spring-etudiants"
+        IMAGE_NAME = "mariam507/spring-etudiants"
         TAG = "v1.1"
     }
 
@@ -10,10 +10,10 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "Récupération du code depuis GitHub via SSH"
+                echo "Récupération du code depuis TON dépôt GitHub via SSH"
                 git branch: 'main',
                     credentialsId: 'github-ssh-rsa',
-                    url: 'git@github.com:rouissinour464/app_act.git'
+                    url: 'git@github.com:mariammalki/spring-boot-etudiants.git'
             }
         }
 
@@ -22,14 +22,14 @@ pipeline {
                 echo "Construction de l’image Docker"
                 sh '''
                     docker build -t ${IMAGE_NAME}:${TAG} .
-                    docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:latest
+                    docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:v1.1
                 '''
             }
         }
 
         stage('Docker Run') {
             steps {
-                echo "Lancement du conteneur Docker"
+                echo "Lancement du conteneur Docker (local)"
                 sh '''
                     docker rm -f etudiants || true
 
@@ -49,7 +49,7 @@ pipeline {
                 echo "Push de l’image Docker vers Docker Hub"
 
                 withCredentials([usernamePassword(
-                    credentialsId: 'docker-hub',
+                    credentialsId: 'docker-hub-credentials',
                     usernameVariable: 'USER',
                     passwordVariable: 'PASS'
                 )]) {
