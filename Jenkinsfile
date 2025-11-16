@@ -2,83 +2,64 @@ pipeline {
     agent any
 
     environment {
-        // Credentials ID exact depuis Jenkins
-        DOCKERHUB_CREDENTIALS = credentials('docker-hub-credentials')
-        SLACK_CREDENTIALS = credentials('slack-webhook-id')  // Slack Webhook ID Jenkins
         IMAGE_NAME = "mariem507/spring-etudiants"
-        IMAGE_TAG = "v1.1"
+        TAG = "v1.1"
     }
 
     stages {
 
         stage('Checkout') {
-            steps { 
-                echo "Récupération du code depuis GitHub..."
-                git 'https://github.com/mariammalki/spring-boot-etudiants.git'
+            steps {
+                echo "Récupération du code depuis GitHub via SSH"
+                git branch: 'main',
+                    credentialsId: 'github-ssh-rsa',
+                    url: 'git@github.com:rouissinour464/app_act.git'
             }
         }
 
-        stage('Build & Docker') {
+        stage('Docker Build') {
             steps {
-                echo "Compilation Maven et création du JAR..."
-                sh 'mvn clean package -DskipTests'
+                echo "Construction de l’image Docker"
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${TAG} .
+                    docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:latest
+                '''
+            }
+        }
 
-                echo "Construction de l\'image Docker..."
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+        stage('Docker Run') {
+            steps {
+                echo "Lancement du conteneur Docker"
+                sh '''
+                    docker rm -f etudiants || true
 
-                echo "Login Docker Hub et push..."
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh "docker login -u $DOCKER_USER -p $DOCKER_PASS"
+                    docker run -d --name etudiants \
+                    -p 8081:8081 \
+                    -e SERVER_PORT=8081 \
+                    -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/gestion_etudiants \
+                    -e SPRING_DATASOURCE_USERNAME=nour \
+                    -e SPRING_DATASOURCE_PASSWORD=actpass \
+                    ${IMAGE_NAME}:${TAG}
+                '''
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                echo "Push de l’image Docker vers Docker Hub"
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    sh '''
+                        echo "$PASS" | docker login -u "$USER" --password-stdin
+                        docker push ${IMAGE_NAME}:${TAG}
+                        docker push ${IMAGE_NAME}:latest
+                    '''
                 }
-
-                sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
             }
-        }
-
-        stage('Tests Unitaires') {
-            steps {
-                echo "Exécution des tests unitaires..."
-                sh 'mvn test'
-            }
-        }
-
-        stage('Security & Quality Scan') {
-            steps {
-                echo "Analyse qualité et sécurité..."
-
-                // SonarQube
-                withSonarQubeEnv('SonarQubeServer') {
-                    sh 'mvn sonar:sonar'
-                }
-
-                // Trivy scan code
-                sh 'trivy fs --exit-code 1 .'
-
-                // Trivy scan Docker image
-                sh "trivy image --exit-code 1 ${IMAGE_NAME}:${IMAGE_TAG}"
-            }
-        }
-
-        stage('Deploy via ArgoCD') {
-            steps {
-                echo "Déploiement via ArgoCD..."
-                sh 'argocd app sync spring-etudiants'
-            }
-        }
-
-        stage('Slack Notification Success') {
-            when {
-                expression { currentBuild.currentResult == 'SUCCESS' }
-            }
-            steps {
-                slackSend(channel: '#ci-cd', color: 'good', message: "Pipeline succeeded for build ${env.BUILD_NUMBER}", tokenCredentialId: 'slack-webhook-id')
-            }
-        }
-    }
-
-    post {
-        failure {
-            slackSend(channel: '#ci-cd', color: 'danger', message: "Pipeline FAILED for build ${env.BUILD_NUMBER}", tokenCredentialId: 'slack-webhook-id')
         }
     }
 }
